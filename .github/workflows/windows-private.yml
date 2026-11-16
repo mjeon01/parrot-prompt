@@ -1,0 +1,50 @@
+name: Windows private build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    if: github.repository == 'mjeon01/parrot-prompt' && github.event.repository.private
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Core regression checks
+        run: dotnet run --project Windows/VoicePrompt.Checks -c Release
+      - name: Build portable Windows app
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+      - name: Native and WPF checks
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force var/qa | Out-Null
+          $app = Resolve-Path dist/VoicePrompt-windows-x64/VoicePrompt.exe
+          $process = Start-Process $app -ArgumentList '--self-test', "$pwd/var/qa/windows-self-test.txt" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Native/WPF checks failed' }
+          $process = Start-Process $app -ArgumentList '--render-preview', "$pwd/var/qa/windows-preview.png" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'WPF render failed' }
+      - name: CPU speech inference smoke test
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin' -OutFile var/qa/ggml-small.bin
+          if ((Get-FileHash var/qa/ggml-small.bin -Algorithm SHA256).Hash -ne '1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b') { throw 'Fixture model hash mismatch' }
+          Invoke-WebRequest 'https://raw.githubusercontent.com/ggml-org/whisper.cpp/master/samples/jfk.wav' -OutFile var/qa/jfk.wav
+          $app = Resolve-Path dist/VoicePrompt-windows-x64/VoicePrompt.exe
+          $process = Start-Process $app -ArgumentList '--smoke-test', "$pwd/var/qa/ggml-small.bin", "$pwd/var/qa/jfk.wav", "$pwd/var/qa/windows-inference.txt" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'CPU inference failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voiceprompt-windows-preview
+          path: |
+            dist/VoicePrompt-*.zip
+            var/qa/windows-*.txt
+            var/qa/windows-preview.png
+          if-no-files-found: error
+          retention-days: 2

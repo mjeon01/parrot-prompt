@@ -1,0 +1,52 @@
+<Window x:Class="VoicePrompt.Windows.MainWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="VoicePrompt · Windows Preview" Width="600" Height="750" MinWidth="480" MinHeight="560"
+ Background="{StaticResource Surface}" FontFamily="Malgun Gothic" FontSize="14"
+ WindowStartupLocation="CenterScreen" Closing="OnClosing">
+ <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+  <StackPanel Margin="28" KeyboardNavigation.TabNavigation="Continue">
+   <Grid Margin="0,0,0,24">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions>
+    <StackPanel VerticalAlignment="Center">
+     <TextBlock Text="VoicePrompt" FontSize="28" FontWeight="Bold"/>
+     <TextBlock Text="말한 내용을, 커서가 있는 곳으로." Foreground="{StaticResource Muted}" Margin="0,8,0,0"/>
+    </StackPanel>
+    <Image Grid.Column="1" Source="Assets/Mascot.png" Width="76" Height="76" AutomationProperties.Name="VoicePrompt 앵무새"/>
+   </Grid>
+   <Border Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+    <StackPanel>
+     <TextBlock Text="01  처음 한 번 준비" FontWeight="Bold" FontSize="16"/>
+     <TextBlock Text="한국어 Whisper small · 약 488 MB · 다운로드 후 오프라인 사용" Foreground="{StaticResource Muted}" Margin="0,8,0,12"/>
+     <Button x:Name="SetupButton" Content="음성 모델 준비" Click="PrepareClick" HorizontalAlignment="Left"/>
+     <TextBlock x:Name="SetupStatus" Text="모델을 준비하고 마이크 접근을 허용해 주세요." Margin="0,12,0,0" AutomationProperties.LiveSetting="Polite"/>
+     <Button Content="Windows 마이크 설정 열기" Click="MicrophoneClick" HorizontalAlignment="Left" Margin="0,12,0,0"/>
+    </StackPanel>
+   </Border>
+   <Border Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+    <StackPanel>
+     <TextBlock Text="02  입력창을 클릭하고 말하기" FontWeight="Bold" FontSize="16"/>
+     <TextBlock Text="Ctrl + Shift + Space" FontSize="23" FontWeight="SemiBold" Margin="0,12,0,4"/>
+     <TextBlock Text="한 번 눌러 시작하고, 다시 눌러 완료합니다.&#x0a;취소: Ctrl + Shift + Esc · Enter는 누르지 않습니다." Foreground="{StaticResource Muted}"/>
+     <TextBlock x:Name="HotkeyStatus" Margin="0,10,0,0"/>
+     <CheckBox x:Name="AutoInsert" Content="같은 입력창에 자동으로 입력" IsChecked="True"/>
+     <CheckBox x:Name="UseVocabulary" Content="LLM 용어 힌트와 표기 보정" IsChecked="True"/>
+     <WrapPanel Margin="0,8,0,0">
+      <Button x:Name="RecordButton" Content="녹음 시작" Click="RecordClick" IsEnabled="False" Margin="0,0,8,8"/>
+      <Button x:Name="CancelButton" Content="취소" Click="CancelClick" IsEnabled="False" Margin="0,0,0,8"/>
+     </WrapPanel>
+     <TextBlock x:Name="Status" Text="모델 준비를 기다리고 있어요." AutomationProperties.LiveSetting="Polite"/>
+     <ProgressBar x:Name="LevelMeter" Minimum="0" Maximum="1" Height="5" Margin="0,12,0,0" AutomationProperties.Name="마이크 입력 크기"/>
+    </StackPanel>
+   </Border>
+   <TextBlock Text="인식한 내용" FontWeight="Bold" FontSize="16" Margin="0,0,0,10"/>
+   <TextBox x:Name="Result" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="100" MaxHeight="260" VerticalScrollBarVisibility="Auto" Padding="12" AutomationProperties.Name="인식한 내용"/>
+   <WrapPanel Margin="0,12,0,12">
+    <Button Content="결과 복사" Click="CopyClick" Margin="0,0,8,8"/>
+    <Button Content="작업 표시줄로 숨기기" Click="HideClick" Margin="0,0,8,8"/>
+    <Button Content="종료" Click="ExitClick" Margin="0,0,0,8"/>
+   </WrapPanel>
+   <TextBlock Text="Windows Preview 0.5.0-preview.1 · 계정·API 키·구독 불필요&#x0a;음성과 전사 내용을 파일로 자동 저장하지 않습니다." Foreground="{StaticResource Muted}" FontSize="12"/>
+  </StackPanel>
+ </ScrollViewer>
+</Window>

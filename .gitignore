@@ -11,3 +11,17 @@
 
 # Finder metadata
 .DS_Store
+
+# Windows builds, local toolchains and isolated public export
+**/bin/
+**/obj/
+/.vs/
+*.user
+*.pdb
+*.env
+.env*
+*.pfx
+*.p12
+*.key
+*.pem
+*.keychain-db
