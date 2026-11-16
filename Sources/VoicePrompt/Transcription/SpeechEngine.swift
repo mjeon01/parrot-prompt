@@ -5,6 +5,7 @@ import VoicePromptCore
 actor SpeechEngine {
     static let variant = "large-v3-v20240930_turbo"
     private var whisper: WhisperKit?
+    private var activePreview: UUID?
 
     static var dataDirectory: URL {
         if let override = ProcessInfo.processInfo.environment["VOICEPROMPT_DATA_DIR"] {
@@ -24,6 +25,15 @@ actor SpeechEngine {
         return FileManager.default.fileExists(atPath: folder.appendingPathComponent("AudioEncoder.mlmodelc").path) ? folder : nil
     }
 
+    static func loadLocalTokenizer() async throws -> any WhisperTokenizer {
+        let root = dataDirectory
+        let hub = HubApiWrapper(downloadBase: root)
+        let folder = hub.localRepoLocation(HubApiWrapper.Repo(id: "openai/whisper-large-v3"))
+        // Validate the local files first, avoiding the SDK's network fallback.
+        _ = try await AutoTokenizerWrapper.from(modelFolder: folder)
+        return try await ModelUtilities.loadTokenizer(for: .largev3, tokenizerFolder: root)
+    }
+
     func prepare(allowDownload: Bool, progress: @escaping @Sendable (Double?, String) -> Void) async throws {
         if whisper != nil { return }
         let root = Self.dataDirectory
@@ -39,15 +49,13 @@ actor SpeechEngine {
         guard let folder else { throw EngineError.modelMissing }
         let hub = HubApiWrapper(downloadBase: root)
         let tokenizerRepo = HubApiWrapper.Repo(id: "openai/whisper-large-v3")
-        let tokenizerFolder = hub.localRepoLocation(tokenizerRepo)
         if allowDownload {
             progress(nil, "언어 사전 다운로드 중")
             _ = try await hub.snapshot(from: tokenizerRepo, matching: ["tokenizer.json", "tokenizer_config.json", "config.json"])
         }
         // Load the tokenizer explicitly from disk. The SDK's default loader can
         // fall back to the network when a cached tokenizer is damaged.
-        _ = try await AutoTokenizerWrapper.from(modelFolder: tokenizerFolder)
-        let localTokenizer = try await ModelUtilities.loadTokenizer(for: .largev3, tokenizerFolder: root)
+        let localTokenizer = try await Self.loadLocalTokenizer()
         progress(nil, "Mac에 맞게 모델 준비 중 · 처음에는 시간이 걸립니다")
         let cpuOnly = ProcessInfo.processInfo.environment["VOICEPROMPT_COMPUTE"] == "cpu"
         let compute = cpuOnly ? ModelComputeOptions(melCompute: .cpuOnly, audioEncoderCompute: .cpuOnly, textDecoderCompute: .cpuOnly) : ModelComputeOptions()
@@ -66,21 +74,36 @@ actor SpeechEngine {
 
     /// `interim` passes are previews that the next pass replaces, so they skip
     /// temperature fallback retries, which can double or triple a pass.
-    func transcribe(_ samples: [Float], interim: Bool = false, vocabulary: TechnicalVocabulary = .standard,
-                    onProgress: (@Sendable (String) -> Void)? = nil) async throws -> [SpeechSegment] {
-        guard let whisper else { throw EngineError.modelMissing }
-        guard AudioGate.hasSignal(samples) else { return [] }
-        let promptTokens = vocabulary.enabled ? whisper.tokenizer.map { tokenizer in
-            Array(tokenizer.encode(text: vocabulary.prompt).filter { $0 < tokenizer.specialTokens.specialTokenBegin }.prefix(160))
-        } : nil
-        let options = DecodingOptions(verbose: false, task: .transcribe, language: "ko",
+    static func decodingOptions(interim: Bool, vocabulary: TechnicalVocabulary,
+                                tokenizer: any WhisperTokenizer) -> DecodingOptions {
+        let promptTokens = vocabulary.enabled
+            ? Array(tokenizer.encode(text: vocabulary.prompt).filter { $0 < tokenizer.specialTokens.specialTokenBegin }.prefix(160))
+            : nil
+        return DecodingOptions(verbose: false, task: .transcribe, language: "ko",
             temperatureFallbackCount: interim ? 0 : 2, detectLanguage: false, skipSpecialTokens: true,
             withoutTimestamps: false, wordTimestamps: false, windowClipTime: 0,
             promptTokens: promptTokens,
             suppressBlank: true, concurrentWorkerCount: 1)
-        let results = try await whisper.transcribe(audioArray: samples, decodeOptions: options) { progress in
+    }
+
+    func transcribe(_ samples: [Float], interim: Bool = false, vocabulary: TechnicalVocabulary = .standard,
+                    onProgress: (@Sendable (String) -> Void)? = nil) async throws -> [SpeechSegment] {
+        guard let whisper else { throw EngineError.modelMissing }
+        guard AudioGate.hasSignal(samples) else { return [] }
+        guard let tokenizer = whisper.tokenizer else { throw WhisperError.tokenizerUnavailable() }
+        let options = Self.decodingOptions(interim: interim, vocabulary: vocabulary, tokenizer: tokenizer)
+        let previewID = UUID()
+        activePreview = previewID
+        defer { if activePreview == previewID { activePreview = nil } }
+        let results = try await whisper.transcribe(audioArray: samples, decodeOptions: options) { [weak self] progress in
             if Task.isCancelled { return false }
-            onProgress?(vocabulary.normalize(progress.text.trimmingCharacters(in: .whitespacesAndNewlines)))
+            if let onProgress {
+                // The SDK invokes callbacks on detached tasks. Keep access to
+                // its non-Sendable tokenizer on the engine actor.
+                Task {
+                    await self?.publish(progress, id: previewID, vocabulary: vocabulary, onProgress: onProgress)
+                }
+            }
             return nil
         }
         try Task.checkCancellation()
@@ -89,6 +112,13 @@ actor SpeechEngine {
                 // A spoken "감사합니다" keeps its voice energy; an invented one has none.
                 && !(Hallucination.isStockPhrase($0.text) && !AudioGate.hasSignal(samples, from: $0.start, to: $0.end))
         }.map { SpeechSegment(start: $0.start, end: $0.end, text: $0.text) }
+    }
+
+    private func publish(_ progress: TranscriptionProgress, id: UUID, vocabulary: TechnicalVocabulary,
+                         onProgress: @Sendable (String) -> Void) {
+        guard activePreview == id, let tokenizer = whisper?.tokenizer,
+              let text = StreamingTranscript.text(from: progress, tokenizer: tokenizer, vocabulary: vocabulary) else { return }
+        onProgress(text)
     }
 
     enum EngineError: LocalizedError {

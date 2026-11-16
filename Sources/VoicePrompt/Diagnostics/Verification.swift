@@ -43,7 +43,9 @@ enum Verification {
             let offset = accumulator.confirmedEnd
             let slice = Array(samples[Int(offset * 16000)..<count])
             let start = Date()
-            let segments = try await engine.transcribe(slice, interim: true)
+            let segments = try await engine.transcribe(slice, interim: true) { partial in
+                print("PARTIAL: " + partial)
+            }
             latencies.append(Date().timeIntervalSince(start))
             accumulator.update(segments, offset: offset, duration: Float(slice.count) / 16000, final: false)
             print(String(format: "audio=%.1fs decode=%.2fs", Double(count) / 16000, latencies.last!) + " " + TechnicalVocabulary.standard.normalize(accumulator.snapshot.text))

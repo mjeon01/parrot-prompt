@@ -136,6 +136,13 @@ enum AppMain {
             do { try HotkeyVerification.run(); exit(0) }
             catch { fputs("Hotkey verification failed: \(error.localizedDescription)\n", stderr); exit(1) }
         }
+        if CommandLine.arguments.contains("--check-preview") {
+            Task {
+                do { try await PreviewVerification.run(); exit(0) }
+                catch { fputs("Preview verification failed: \(error.localizedDescription)\n", stderr); exit(1) }
+            }
+            RunLoop.main.run(); return
+        }
         if let flag = CommandLine.arguments.firstIndex(of: "--render-ui"), flag + 1 < CommandLine.arguments.count {
             do { try Verification.renderViews(to: CommandLine.arguments[flag + 1]); exit(0) }
             catch { fputs("Render failed: \(error)\n", stderr); exit(1) }

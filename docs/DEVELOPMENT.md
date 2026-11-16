@@ -22,11 +22,15 @@ Finder에서 실행하려면 `scripts/launchers`의 업데이트·재실행·권
 
 ```sh
 dist/VoicePrompt.app/Contents/MacOS/VoicePrompt --check-hotkeys
+dist/VoicePrompt.app/Contents/MacOS/VoicePrompt --check-preview
 VOICEPROMPT_DATA_DIR="$PWD/dist/VoicePromptData" \
   dist/VoicePrompt.app/Contents/MacOS/VoicePrompt --stream-file /path/to/audio.wav
 ```
 
 OS 단축키 전달은 앱 설정의 **단축키 검사**에서 수신 횟수를 확인합니다.
+`--check-preview`는 설치한 Whisper 사전과 SDK의 실제 프리필 경로로 용어 힌트가
+실시간 결과에 섞이지 않는지 검사합니다. 모델 추론·마이크·자동 입력은 실행하지 않습니다.
+`--stream-file`은 파일 추론의 토큰 중간 결과(`PARTIAL`)와 완료 결과를 모두 출력합니다.
 자세한 결과와 실행 환경의 제한은 [검증 기록](VERIFICATION.md)에 있습니다.
 
 ## 기술 용어 처리
@@ -35,6 +39,12 @@ OS 단축키 전달은 앱 설정의 **단축키 검사**에서 수신 횟수를
 `SpeechEngine`은 용어를 토큰으로 변환해 WhisperKit의 `promptTokens`에 전달합니다.
 `prefixTokens`로 출력 문장을 강제하지 않습니다. 힌트는 특수 토큰을 제외한 최대 160토큰이며,
 추가 용어는 앞에서부터 최대 24개, 각 60글자로 제한합니다.
+
+WhisperKit 1.1.1의 `TranscriptionProgress.text`에는 프리필된 용어 힌트도 들어갑니다.
+이를 화면에 직접 사용하지 않습니다. `StreamingTranscript`가 `progress.tokens`에서
+`startOfTranscriptToken` 뒤, `endToken` 앞의 일반 텍스트 토큰만 디코딩합니다.
+힌트만 있는 콜백과 시작 경계가 없는 콜백은 무시합니다. 실제 발화로 생성된 용어는
+삭제하지 않으며, SDK가 이미 경계를 분리하는 최종 구간 처리도 그대로 사용합니다.
 
 전사 누적에는 원본 구간과 시각을 유지하고, 화면 표시와 최종 붙여넣기에 같은 보정을 적용합니다.
 보정은 Qwen·Ollama 이름, RAG 기술 문맥과 명시적인 모델 크기를 다룹니다. `2.57B`를 무조건 나누지 않으며,

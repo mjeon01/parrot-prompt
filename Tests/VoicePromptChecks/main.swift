@@ -64,6 +64,24 @@ expect(preview.snapshot.text == "회의 내용을 정리해 주세요.", "A comp
 preview.settle(TranscriptSnapshot(), final: true)
 expect(preview.snapshot.text.isEmpty, "An authoritative silent final result must clear speculative text")
 
+// Whisper progress contains [previous prompt, SOT, language/task, audio tokens].
+// Special-token filtering alone leaves the vocabulary words (10, 11, 12).
+func spoken(_ tokens: [Int]) -> [Int] {
+    TranscriptTokens.spoken(from: tokens, startOfTranscript: 101,
+        endOfTranscript: 100, specialTokenBegin: 100)
+}
+let hintedPrefill = [105, 10, 11, 12, 101, 102, 103, 110]
+expect(spoken(hintedPrefill).isEmpty, "Prompt-only progress must never be shown as speech")
+expect(spoken(hintedPrefill + [20]) == [20], "The first spoken token must appear without the long prompt")
+expect(spoken(hintedPrefill + [20, 21, 115, 116, 22]) == [20, 21, 22], "Timestamp boundaries must preserve all spoken segments")
+expect(spoken(hintedPrefill + [10, 11, 12]) == [10, 11, 12], "Actually spoken vocabulary must not be blacklisted")
+expect(spoken([101, 102, 103, 110, 20, 21]) == [20, 21], "Speech must work with vocabulary hints disabled")
+expect(spoken([101, 102, 103, 104, 20]) == [20], "No-timestamps decoding must preserve speech")
+expect(spoken([105, 10, 11, 12]).isEmpty, "An absent transcript boundary must not expose the prompt")
+expect(spoken([]).isEmpty && spoken([101]).isEmpty, "Empty progress must remain empty")
+expect(spoken(hintedPrefill + [20, 100, 10]) == [20], "Tokens after end-of-transcript are not speech")
+expect(spoken(hintedPrefill + [-1, 20]) == [20], "Invalid tokens must not reach the tokenizer")
+
 let inputSource = HotkeyChord(keyCode: 49, modifiers: HotkeyChord.control | HotkeyChord.option)
 let emoji = HotkeyChord(keyCode: 49, modifiers: HotkeyChord.control | HotkeyChord.command)
 let spotlight = HotkeyChord(keyCode: 49, modifiers: HotkeyChord.command)

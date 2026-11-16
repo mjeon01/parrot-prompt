@@ -5,6 +5,9 @@ trap 'printf "\n업데이트 중 오류가 났습니다. 위 오류 문구를 �
 ./scripts/check.sh
 ./scripts/build.sh
 mkdir -p var/qa
+if [ -f "$PWD/dist/VoicePromptData/model-path.txt" ]; then
+  "$PWD/dist/VoicePrompt.app/Contents/MacOS/VoicePrompt" --check-preview 2>&1 | tee var/qa/preview-check.txt
+fi
 "$PWD/dist/VoicePrompt.app/Contents/MacOS/VoicePrompt" --check-hotkeys 2>&1 | tee var/qa/hotkey-check.txt
 ./scripts/restart.sh
 printf '\n업데이트 완료. 설치한 버전은 다음과 같습니다.\n'
