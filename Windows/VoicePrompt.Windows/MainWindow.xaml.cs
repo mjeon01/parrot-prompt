@@ -73,6 +73,8 @@ public partial class MainWindow : Window
             await Task.Run(() => engine.Load(ModelStore.ModelPath), token);
             token.ThrowIfCancellationRequested();
             ready = true; SetupStatus.Text = "준비 완료 · 이제 인터넷 없이 사용할 수 있어요.";
+            SetupExpander.Header = "01  준비 완료 · 로컬 음성 모델";
+            SetupExpander.IsExpanded = false;
             Status.Text = "입력창에 커서를 놓고 단축키를 눌러 주세요.";
             RecordButton.IsEnabled = true;
         }
@@ -111,6 +113,7 @@ public partial class MainWindow : Window
             recording = true; meter.Start(); RecordButton.Content = "녹음 완료";
             var cancelRegistered = hotkey?.EnableCancel(true) ?? false;
             Status.Text = cancelRegistered ? "듣고 있어요. 단축키를 다시 누르면 완료합니다." : "듣고 있어요. 취소 단축키가 사용 중이므로 창의 취소 버튼을 사용하세요.";
+            preview.Update("듣고 있어요", "말한 내용이 여기에 표시됩니다.");
             var lastDecoded = 0;
             while (recording)
             {
@@ -147,7 +150,7 @@ public partial class MainWindow : Window
             if (Result.Text.Length == 0) Status.Text = "인식된 음성이 없어요. 마이크와 거리를 확인해 주세요.";
             else if (insert) Status.Text = await TextInsertion.InsertAsync(Result.Text, target, token);
             else Status.Text = "인식을 마쳤어요. 결과를 복사해 원하는 입력창에 붙여 넣으세요.";
-            if (!IsVisible) { preview.Update(Status.Text, Result.Text); }
+            if (!IsVisible) { preview.Update(Status.Text, Result.Text, autoHide: true); }
         }
         catch (OperationCanceledException) { Result.Clear(); preview.Hide(); }
         catch (Exception ex) { Status.Text = Friendly(ex); preview.Hide(); if (!quitting) ShowSettings(); }

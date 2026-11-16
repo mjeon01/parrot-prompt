@@ -29,6 +29,10 @@ internal static class Diagnostics
         {
             var window = new MainWindow();
             window.SetupStatus.Text = "준비 완료 · 인터넷 없이 사용할 수 있어요.";
+            window.SetupExpander.Header = "01  준비 완료 · 로컬 음성 모델";
+            window.SetupExpander.IsExpanded = false;
+            window.SetupButton.IsEnabled = false;
+            window.RecordButton.IsEnabled = true;
             window.Status.Text = "입력창에 커서를 놓고 단축키를 눌러 주세요.";
             window.HotkeyStatus.Text = "전역 단축키 준비 완료";
             window.Result.Text = "Qwen 2.5 7B 모델을 Ollama로 실행하고 싶어요.";

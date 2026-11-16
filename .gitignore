@@ -25,3 +25,5 @@
 *.key
 *.pem
 *.keychain-db
+__pycache__/
+*.pyc

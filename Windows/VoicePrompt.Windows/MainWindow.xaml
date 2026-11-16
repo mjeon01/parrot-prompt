@@ -4,7 +4,7 @@
  Title="VoicePrompt · Windows Preview" Width="600" Height="750" MinWidth="480" MinHeight="560"
  Background="{StaticResource Surface}" FontFamily="Malgun Gothic" FontSize="14"
  WindowStartupLocation="CenterScreen" Closing="OnClosing">
- <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+ <ScrollViewer Background="{StaticResource Surface}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
   <StackPanel Margin="28" KeyboardNavigation.TabNavigation="Continue">
    <Grid Margin="0,0,0,24">
     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="80"/></Grid.ColumnDefinitions>
@@ -15,13 +15,14 @@
     <Image Grid.Column="1" Source="Assets/Mascot.png" Width="76" Height="76" AutomationProperties.Name="VoicePrompt 앵무새"/>
    </Grid>
    <Border Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+    <Expander x:Name="SetupExpander" Header="01  처음 한 번 준비" IsExpanded="True" FontWeight="SemiBold">
     <StackPanel>
-     <TextBlock Text="01  처음 한 번 준비" FontWeight="Bold" FontSize="16"/>
      <TextBlock Text="한국어 Whisper small · 약 488 MB · 다운로드 후 오프라인 사용" Foreground="{StaticResource Muted}" Margin="0,8,0,12"/>
      <Button x:Name="SetupButton" Content="음성 모델 준비" Click="PrepareClick" HorizontalAlignment="Left"/>
      <TextBlock x:Name="SetupStatus" Text="모델을 준비하고 마이크 접근을 허용해 주세요." Margin="0,12,0,0" AutomationProperties.LiveSetting="Polite"/>
      <Button Content="Windows 마이크 설정 열기" Click="MicrophoneClick" HorizontalAlignment="Left" Margin="0,12,0,0"/>
     </StackPanel>
+    </Expander>
    </Border>
    <Border Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,16">
     <StackPanel>
