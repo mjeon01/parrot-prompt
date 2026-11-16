@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 trap 'printf "\n설정에 실패했습니다. 위 오류 문구를 확인해 주세요.\n"; read -r -p "Enter를 누르면 닫습니다. "' ERR
 ./scripts/setup-signing.sh
 ./scripts/build.sh

@@ -48,7 +48,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self?.item.button?.contentTintColor = phase == .recording ? .systemRed : nil
         }
         if SpeechEngine.installedModel != nil { model.prepare(download: false) }
-        if SpeechEngine.installedModel == nil || !model.microphoneGranted || !model.accessibilityGranted { showSettings() }
+        if SpeechEngine.installedModel == nil || !model.microphoneGranted || !model.accessibilityGranted
+            || !model.shortcutNotice.isEmpty || !model.shortcutError.isEmpty { showSettings() }
         showGreeting()
         if CommandLine.arguments.contains("--preview-demo") {
             model.phase = .recording
@@ -131,6 +132,10 @@ enum AppMain {
             print("VoicePrompt \(AppRelease.version) (build \(AppRelease.build))")
             return
         }
+        if CommandLine.arguments.contains("--check-hotkeys") {
+            do { try HotkeyVerification.run(); exit(0) }
+            catch { fputs("Hotkey verification failed: \(error.localizedDescription)\n", stderr); exit(1) }
+        }
         if let flag = CommandLine.arguments.firstIndex(of: "--render-ui"), flag + 1 < CommandLine.arguments.count {
             do { try Verification.renderViews(to: CommandLine.arguments[flag + 1]); exit(0) }
             catch { fputs("Render failed: \(error)\n", stderr); exit(1) }
@@ -146,7 +151,7 @@ enum AppMain {
                         let samples = try AudioProcessor.loadAudioAsFloatArray(fromPath: CommandLine.arguments[flag + 1])
                         let start = Date()
                         let results = try await engine.transcribe(samples)
-                        print(TranscriptAccumulator.join(results.map(\.text)))
+                        print(TechnicalVocabulary.standard.normalize(TranscriptAccumulator.join(results.map(\.text))))
                         print(String(format: "Transcription: %.2fs; audio: %.2fs", Date().timeIntervalSince(start), Double(samples.count) / 16000))
                     }
                     if let flag = CommandLine.arguments.firstIndex(of: "--stream-file"), flag + 1 < CommandLine.arguments.count {

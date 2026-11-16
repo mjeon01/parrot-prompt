@@ -41,9 +41,19 @@ final class AppModel: ObservableObject {
     }
     @Published var shortcut: Shortcut = .standard
     @Published var shortcutError = ""
+    @Published var shortcutNotice = ""
+    @Published var shortcutFeedback = ""
     @Published var capturingShortcut = false
+    @Published var testingShortcut = false
+    @Published var shortcutTestCount = 0
     @Published var previewLagging = false
     @Published var finalizationSeconds: Double?
+    @Published var technicalVocabularyEnabled = UserDefaults.standard.object(forKey: "technicalVocabularyEnabled") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(technicalVocabularyEnabled, forKey: "technicalVocabularyEnabled") }
+    }
+    @Published var customVocabulary = UserDefaults.standard.string(forKey: "customVocabulary") ?? "" {
+        didSet { UserDefaults.standard.set(customVocabulary, forKey: "customVocabulary") }
+    }
 
     let engine = SpeechEngine()
     let capture = AudioCapture()
@@ -64,8 +74,18 @@ final class AppModel: ObservableObject {
     init(registerHotkeys: Bool = true) {
         if let data = UserDefaults.standard.data(forKey: "shortcut"),
            let saved = try? JSONDecoder().decode(Shortcut.self, from: data) { shortcut = saved }
-        if registerHotkeys && !hotkeys.register(shortcut) { shortcutError = "단축키를 등록하지 못했습니다. 다른 조합을 선택해 주세요." }
-        hotkeys.onToggle = { [weak self] in self?.toggle() }
+        if registerHotkeys {
+            if let reason = shortcut.conflictReason {
+                let previous = shortcut
+                if hotkeys.register(.standard) {
+                    shortcut = .standard
+                    UserDefaults.standard.set(try? JSONEncoder().encode(previous), forKey: "shortcutBeforeConflictRepair")
+                    UserDefaults.standard.set(try? JSONEncoder().encode(shortcut), forKey: "shortcut")
+                    shortcutNotice = "\(previous.label)는 \(reason) \(shortcut.label)로 바꿨어요."
+                } else { shortcutError = reason + " " + hotkeys.registrationError }
+            } else if !hotkeys.register(shortcut) { shortcutError = hotkeys.registrationError }
+        }
+        hotkeys.onToggle = { [weak self] in self?.receiveShortcut() }
         hotkeys.onCancel = { [weak self] in self?.cancel() }
         refreshPermissions()
     }
@@ -112,6 +132,7 @@ final class AppModel: ObservableObject {
 
     func toggle() {
         guard !capturingShortcut else { return }
+        testingShortcut = false
         if phase == .recording {
             capture.stop(); phase = .finishing; level = 0
             return
@@ -135,6 +156,7 @@ final class AppModel: ObservableObject {
 
     private func run(_ token: UUID) async {
         var accumulator = TranscriptAccumulator()
+        let vocabulary = TechnicalVocabulary(enabled: technicalVocabularyEnabled, customTerms: customVocabulary)
         do {
             if microphoneID != 0 && !devices.contains(where: { $0.id == microphoneID }) { throw AudioCapture.CaptureError.deviceUnavailable }
             try capture.start(deviceID: microphoneID == 0 ? nil : microphoneID)
@@ -165,11 +187,11 @@ final class AppModel: ObservableObject {
                 let decodeID = UUID()
                 activeDecode = decodeID
                 let prefix = accumulator.snapshot.confirmed
-                let segments = try await engine.transcribe(audio, interim: true) { [weak self] partial in
+                let segments = try await engine.transcribe(audio, interim: true, vocabulary: vocabulary) { [weak self] partial in
                     Task { @MainActor in
                         guard let self, self.session.accepts(token), self.activeDecode == decodeID,
                               self.phase == .recording || self.phase == .finishing else { return }
-                        if self.livePreview.acceptPartial(TranscriptSnapshot(confirmed: prefix, draft: partial)) {
+                        if self.livePreview.acceptPartial(TranscriptSnapshot(draft: vocabulary.normalize(TranscriptSnapshot(confirmed: prefix, draft: partial).text))) {
                             self.lastPreview = Date()
                         }
                     }
@@ -177,7 +199,7 @@ final class AppModel: ObservableObject {
                 guard session.accepts(token) else { return }
                 activeDecode = nil
                 accumulator.update(segments, offset: offset, duration: Float(audio.count) / 16000, final: false)
-                livePreview.settle(accumulator.snapshot)
+                livePreview.settle(TranscriptSnapshot(draft: vocabulary.normalize(accumulator.snapshot.text)))
                 publishPreview(); lastPreview = Date()
             }
             guard session.accepts(token) else { return }
@@ -185,10 +207,10 @@ final class AppModel: ObservableObject {
             let finishStart = Date()
             let offset = accumulator.confirmedEnd
             let remaining = capture.snapshot(from: Int(offset * 16000)).samples
-            let segments = try await engine.transcribe(remaining)
+            let segments = try await engine.transcribe(remaining, vocabulary: vocabulary)
             guard session.accepts(token) else { return }
             accumulator.update(segments, offset: offset, duration: Float(remaining.count) / 16000, final: true)
-            livePreview.settle(accumulator.snapshot, final: true)
+            livePreview.settle(TranscriptSnapshot(confirmed: vocabulary.normalize(accumulator.snapshot.text)), final: true)
             publishPreview()
             capture.clear(); level = 0; previewLagging = false
             finalizationSeconds = Date().timeIntervalSince(finishStart)
@@ -275,21 +297,18 @@ final class AppModel: ObservableObject {
 
     func beginShortcutCapture() {
         guard !phase.busy, !capturingShortcut else { return }
+        testingShortcut = false
         shortcutError = ""; capturingShortcut = true
         shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
+            guard !event.isARepeat else { return nil }
             if event.keyCode == 53 { self.endShortcutCapture(); return nil }
             guard let proposed = Shortcut.from(event) else {
                 self.shortcutError = "Control, Option 또는 Command와 다른 키를 함께 눌러 주세요."
                 return nil
             }
-            if self.hotkeys.register(proposed) {
-                self.shortcut = proposed
-                UserDefaults.standard.set(try? JSONEncoder().encode(proposed), forKey: "shortcut")
+            if self.applyShortcut(proposed) {
                 self.endShortcutCapture()
-            } else {
-                _ = self.hotkeys.register(self.shortcut)
-                self.shortcutError = "다른 앱에서 사용 중입니다. 다른 조합을 선택해 주세요."
             }
             return nil
         }
@@ -298,5 +317,47 @@ final class AppModel: ObservableObject {
     func endShortcutCapture() {
         if let shortcutMonitor { NSEvent.removeMonitor(shortcutMonitor) }
         shortcutMonitor = nil; capturingShortcut = false
+    }
+
+    private func receiveShortcut() {
+        if capturingShortcut { endShortcutCapture(); return }
+        if testingShortcut {
+            shortcutTestCount += 1
+            shortcutFeedback = "입력 감지 \(shortcutTestCount)회 · 녹음하지 않습니다"
+            return
+        }
+        switch phase {
+        case .recording: shortcutFeedback = "입력 감지 · 녹음을 마무리합니다"
+        case .starting: shortcutFeedback = "입력 감지 · 마이크를 준비하고 있습니다"
+        case .finishing, .inserting, .cancelling: shortcutFeedback = "입력 감지 · 이전 작업이 끝나면 다시 시작할 수 있습니다"
+        default:
+            shortcutFeedback = modelReady ? "입력 감지 · 녹음을 시작합니다" : "입력 감지 · 음성 모델을 먼저 준비해 주세요"
+        }
+        toggle()
+    }
+
+    @discardableResult private func applyShortcut(_ proposed: Shortcut) -> Bool {
+        guard hotkeys.register(proposed) else {
+            shortcutError = hotkeys.registrationError
+            return false
+        }
+        shortcut = proposed
+        UserDefaults.standard.set(try? JSONEncoder().encode(proposed), forKey: "shortcut")
+        shortcutError = ""; shortcutNotice = ""; shortcutFeedback = "단축키를 변경했습니다"
+        return true
+    }
+
+    func useRecommendedShortcut() {
+        guard !phase.busy else { return }
+        testingShortcut = false
+        if applyShortcut(.standard) { endShortcutCapture() }
+    }
+
+    func toggleShortcutTest() {
+        guard !phase.busy, !capturingShortcut else { return }
+        if testingShortcut { testingShortcut = false; return }
+        guard hotkeys.register(shortcut) else { shortcutError = hotkeys.registrationError; return }
+        shortcutError = ""; shortcutTestCount = 0; testingShortcut = true
+        shortcutFeedback = "\(shortcut.label)를 눌러 보세요 · 녹음하지 않습니다"
     }
 }

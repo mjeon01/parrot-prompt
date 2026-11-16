@@ -46,14 +46,14 @@ enum Verification {
             let segments = try await engine.transcribe(slice, interim: true)
             latencies.append(Date().timeIntervalSince(start))
             accumulator.update(segments, offset: offset, duration: Float(slice.count) / 16000, final: false)
-            print(String(format: "audio=%.1fs decode=%.2fs", Double(count) / 16000, latencies.last!) + " " + accumulator.snapshot.text)
+            print(String(format: "audio=%.1fs decode=%.2fs", Double(count) / 16000, latencies.last!) + " " + TechnicalVocabulary.standard.normalize(accumulator.snapshot.text))
         }
         let start = Date()
         let offset = accumulator.confirmedEnd
         let remaining = Array(samples.dropFirst(Int(offset * 16000)))
         let segments = try await engine.transcribe(remaining)
         accumulator.update(segments, offset: offset, duration: Float(remaining.count) / 16000, final: true)
-        print("FINAL: " + accumulator.snapshot.text)
+        print("FINAL: " + TechnicalVocabulary.standard.normalize(accumulator.snapshot.text))
         print(String(format: "Final flush: %.2fs; mean preview decode: %.2fs", Date().timeIntervalSince(start), latencies.reduce(0, +) / Double(max(1, latencies.count))))
     }
 }

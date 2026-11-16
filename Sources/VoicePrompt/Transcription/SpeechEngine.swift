@@ -66,16 +66,21 @@ actor SpeechEngine {
 
     /// `interim` passes are previews that the next pass replaces, so they skip
     /// temperature fallback retries, which can double or triple a pass.
-    func transcribe(_ samples: [Float], interim: Bool = false, onProgress: (@Sendable (String) -> Void)? = nil) async throws -> [SpeechSegment] {
+    func transcribe(_ samples: [Float], interim: Bool = false, vocabulary: TechnicalVocabulary = .standard,
+                    onProgress: (@Sendable (String) -> Void)? = nil) async throws -> [SpeechSegment] {
         guard let whisper else { throw EngineError.modelMissing }
         guard AudioGate.hasSignal(samples) else { return [] }
+        let promptTokens = vocabulary.enabled ? whisper.tokenizer.map { tokenizer in
+            Array(tokenizer.encode(text: vocabulary.prompt).filter { $0 < tokenizer.specialTokens.specialTokenBegin }.prefix(160))
+        } : nil
         let options = DecodingOptions(verbose: false, task: .transcribe, language: "ko",
             temperatureFallbackCount: interim ? 0 : 2, detectLanguage: false, skipSpecialTokens: true,
             withoutTimestamps: false, wordTimestamps: false, windowClipTime: 0,
+            promptTokens: promptTokens,
             suppressBlank: true, concurrentWorkerCount: 1)
         let results = try await whisper.transcribe(audioArray: samples, decodeOptions: options) { progress in
             if Task.isCancelled { return false }
-            onProgress?(progress.text.trimmingCharacters(in: .whitespacesAndNewlines))
+            onProgress?(vocabulary.normalize(progress.text.trimmingCharacters(in: .whitespacesAndNewlines)))
             return nil
         }
         try Task.checkCancellation()

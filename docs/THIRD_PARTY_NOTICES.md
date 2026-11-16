@@ -15,6 +15,8 @@ Architecture references (no application source copied):
   non-cloud dictation and clipboard insertion approach.
 - VoiceInk: https://github.com/Beingpax/VoiceInk — dictation UX reference.
 - WhisperDictation: https://github.com/JoshPetrenko/WhisperDictation — local workflow reference.
+- KeyboardShortcuts (MIT): https://github.com/sindresorhus/KeyboardShortcuts —
+  Carbon dispatcher routing and system-shortcut conflict detection reference.
 
 WhisperKit's AudioStreamTranscriber was consulted for the timed, confirmed versus
 tentative streaming segment approach. VoicePrompt's capture, accumulator and

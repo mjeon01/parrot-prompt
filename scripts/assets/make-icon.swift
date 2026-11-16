@@ -1,8 +1,9 @@
-// Builds the app icons from the parrot logo in assets/image.png.
-// Usage: swift scripts/make-icon.swift Resources  (writes AppIcon.icns/.png, MenuIcon*.png, Mascot.png)
+// Builds icons and the mascot from assets/branding/parrot.png.
+// Usage: swift scripts/assets/make-icon.swift [resource-output-directory]
 // The menu bar needs a one-color template, so it uses the simplified parrot drawn below.
 import AppKit
 
+let projectRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 let terracotta = NSColor(srgbRed: 0.851, green: 0.467, blue: 0.341, alpha: 1)  // #D97757
 let deep = NSColor(srgbRed: 0.769, green: 0.384, blue: 0.263, alpha: 1)        // #C46243
 let peach = NSColor(srgbRed: 0.965, green: 0.851, blue: 0.796, alpha: 1)       // #F6D9CB
@@ -111,7 +112,7 @@ func transparentLogo(_ url: URL) -> CGImage {
     return context.makeImage()!
 }
 
-let logo = transparentLogo(URL(fileURLWithPath: "assets/image.png"))
+let logo = transparentLogo(projectRoot.appendingPathComponent("assets/branding/parrot.png"))
 // Content bounds of the logo inside the 728 x 625 source (parrot and sound waves).
 let logoBounds = CGRect(x: 46, y: 625 - 599, width: 642, height: 578)
 
@@ -141,7 +142,11 @@ func appIcon(_ s: CGFloat) {
     drawLogo(in: body.insetBy(dx: 70 * s, dy: 70 * s))
 }
 
-let root = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "Resources")
+let root = CommandLine.arguments.count > 1 ? URL(fileURLWithPath: CommandLine.arguments[1]) : projectRoot.appendingPathComponent("Resources")
+let icons = root.appendingPathComponent("Icons", isDirectory: true)
+let images = root.appendingPathComponent("Images", isDirectory: true)
+try FileManager.default.createDirectory(at: icons, withIntermediateDirectories: true)
+try FileManager.default.createDirectory(at: images, withIntermediateDirectories: true)
 let iconset = FileManager.default.temporaryDirectory.appendingPathComponent("AppIcon-\(UUID().uuidString).iconset")
 try FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
 for base in [16, 32, 128, 256, 512] {
@@ -150,14 +155,14 @@ for base in [16, 32, 128, 256, 512] {
 }
 let iconutil = Process()
 iconutil.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
-iconutil.arguments = ["-c", "icns", iconset.path, "-o", root.appendingPathComponent("AppIcon.icns").path]
+iconutil.arguments = ["-c", "icns", iconset.path, "-o", icons.appendingPathComponent("AppIcon.icns").path]
 try iconutil.run(); iconutil.waitUntilExit()
 try FileManager.default.removeItem(at: iconset)
-try render(size: 1024, draw: appIcon).write(to: root.appendingPathComponent("AppIcon.png"))
+try render(size: 1024, draw: appIcon).write(to: icons.appendingPathComponent("AppIcon.png"))
 
 // Logo alone on a clear background, for the greeting and the dictation bubble.
 try render(size: 512, draw: { s in drawLogo(in: CGRect(x: 0, y: 0, width: 1024 * s, height: 1024 * s)) })
-    .write(to: root.appendingPathComponent("Mascot.png"))
+    .write(to: images.appendingPathComponent("Mascot.png"))
 
 // Menu bar template: the parrot silhouette with the eye cut out.
 func menuIcon(_ s: CGFloat) {
@@ -168,7 +173,7 @@ func menuIcon(_ s: CGFloat) {
     transform.concat()
     drawParrot(scale: s, mono: .black)
 }
-try render(size: 18, draw: menuIcon).write(to: root.appendingPathComponent("MenuIcon.png"))
-try render(size: 36, draw: menuIcon).write(to: root.appendingPathComponent("MenuIcon@2x.png"))
+try render(size: 18, draw: menuIcon).write(to: icons.appendingPathComponent("MenuIcon.png"))
+try render(size: 36, draw: menuIcon).write(to: icons.appendingPathComponent("MenuIcon@2x.png"))
 
-print("Wrote AppIcon.icns, AppIcon.png, MenuIcon.png, MenuIcon@2x.png, Mascot.png to \(root.path)")
+print("Wrote app/menu icons to \(icons.path) and Mascot.png to \(images.path)")

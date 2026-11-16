@@ -1,6 +1,13 @@
-.build/
-.swiftpm/
-dist/
-var/
+# Local SwiftPM builds and machine-specific dependency mirrors
+/.build/
+/.swiftpm/
+
+# Packaged app, downloaded models, and local QA files
+/dist/
+/var/
+
+# Private local signing identity and keychain
+/.local-signing/
+
+# Finder metadata
 .DS_Store
-.local-signing/

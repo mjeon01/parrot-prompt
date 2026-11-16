@@ -67,7 +67,21 @@ struct SettingsView: View {
                             .font(.system(size: 14, weight: .medium, design: .monospaced)).buttonStyle(.bordered).disabled(model.phase.busy)
                     }
                     if !model.shortcutError.isEmpty { Text(model.shortcutError).font(.caption).foregroundStyle(.red) }
+                    if !model.shortcutNotice.isEmpty { Text(model.shortcutNotice).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     if model.capturingShortcut { Text("Control / Option / Command + 키 · Esc로 취소").font(.caption).foregroundStyle(.secondary) }
+                    HStack(spacing: 10) {
+                        Button(model.testingShortcut ? "검사 끝내기" : "단축키 검사") { model.toggleShortcutTest() }
+                            .disabled(model.phase.busy || model.capturingShortcut)
+                        if model.shortcut != .standard || !model.shortcutError.isEmpty {
+                            Button("추천 조합 \(Shortcut.standard.label)") { model.useRecommendedShortcut() }
+                                .disabled(model.phase.busy)
+                        }
+                        Spacer(minLength: 0)
+                    }.controlSize(.small)
+                    if !model.shortcutFeedback.isEmpty {
+                        Text(model.shortcutFeedback).font(.caption).foregroundStyle(model.testingShortcut ? accent : .secondary)
+                            .monospacedDigit().fixedSize(horizontal: false, vertical: true)
+                    }
                     Divider()
                     HStack {
                         Text("입력 마이크").font(.system(size: 13, weight: .semibold))
@@ -82,6 +96,20 @@ struct SettingsView: View {
                     }
                 }.padding(18).background(card, in: RoundedRectangle(cornerRadius: 16))
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(.primary.opacity(0.06)))
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("LLM 용어 보정", isOn: $model.technicalVocabularyEnabled)
+                        .font(.system(size: 13, weight: .semibold)).toggleStyle(.switch)
+                    Text("Qwen 2.5 7B, Ollama, RAG 등 기술 용어 표기를 돕습니다. 원래 인식 결과를 사용하려면 꺼 주세요.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if model.technicalVocabularyEnabled {
+                        TextField("추가할 용어 (쉼표로 구분)", text: $model.customVocabulary, axis: .vertical)
+                            .textFieldStyle(.roundedBorder).lineLimit(2...3)
+                        Text("예: Gemma, vLLM, FlashAttention · 다음 녹음부터 적용")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }.padding(18).background(card, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.primary.opacity(0.06)))
+                    .disabled(model.phase.busy)
                 HStack(alignment: .top, spacing: 9) {
                     Image(systemName: "info.circle").accessibilityHidden(true)
                     Text("한국어와 영어 용어를 함께 말할 수 있어요. 음성과 전사 기록은 저장하지 않으며, 입력한 내용은 직접 확인하고 전송하세요.").lineSpacing(3)
