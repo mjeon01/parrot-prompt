@@ -1,0 +1,6 @@
+.build/
+.swiftpm/
+dist/
+var/
+.DS_Store
+.local-signing/

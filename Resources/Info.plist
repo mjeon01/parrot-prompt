@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleExecutable</key><string>VoicePrompt</string>
+  <key>CFBundleIdentifier</key><string>local.voiceprompt.mac</string>
+  <key>CFBundleName</key><string>VoicePrompt</string>
+  <key>CFBundleDisplayName</key><string>VoicePrompt</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.3.0</string>
+  <key>CFBundleVersion</key><string>3</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSUIElement</key><true/>
+  <key>NSMicrophoneUsageDescription</key><string>단축키로 녹음을 시작한 뒤 음성을 Mac에서 전사합니다. 음성은 외부로 전송되지 않습니다.</string>
+  <key>NSHighResolutionCapable</key><true/>
+</dict></plist>
