@@ -16,4 +16,5 @@ if (Test-Path "$output/runtimes") {
 }
 $forbidden = Get-ChildItem $output -Recurse -File | Where-Object { $_.Extension -in '.cs','.swift','.pfx','.p12','.key','.pdb' }
 if ($forbidden) { throw 'Unexpected source, symbols or signing material in package' }
-Compress-Archive -Path $output -DestinationPath 'dist/VoicePrompt-0.5.0-preview.1-windows-x64.zip'
+$version = ([xml](Get-Content Windows/VoicePrompt.Windows/VoicePrompt.Windows.csproj)).Project.PropertyGroup.Version
+Compress-Archive -Path $output -DestinationPath "dist/VoicePrompt-$version-windows-x64.zip"

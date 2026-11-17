@@ -2,6 +2,22 @@
 
 환경: Apple M4 Pro, 메모리 48 GB, macOS 27.2.1, Swift 6.4.2.
 
+## 2026-11-17 README 등 영어 원문 표기
+
+- 한국어 고정(`language: ko`, `WithLanguage("ko")`)을 제거하고 두 플랫폼에 언어 자동 감지를 적용했습니다.
+  번역을 활성화하지 않으며 Mac은 `task: transcribe`, Windows는 기본 전사 작업을 유지합니다.
+- README·GitHub·API 등 14개 개발 용어를 힌트 앞에 추가하고 단어 경계·한국어 조사를 확인해 음차를 보정합니다.
+  `리드미컬한`, `리듬 위에`, 사람 이름 `제이슨`, 영어 일반 동사 `react`와 명사 `python`, 코드·URL·파일명 보존을 검사합니다.
+- 공유 표기 fixture 35개로 결과·재보정·비활성화를 확인했습니다. Mac 코어 244개, Windows 코어 128개 통과.
+  Mac SDK 검사 158개 통과: 언어 자동 감지·원어 전사·힌트 토큰 예산과 실시간 힌트 미노출 포함.
+- Windows Release 크로스 컴파일 경고·오류 0개. Windows 샘플 추론 진단도 앱의 실제 자동 언어·용어 힌트 경로를 사용하도록 변경했습니다.
+- macOS 시스템 음성 합성으로 만든 영어 4.53초·한국어 5.95초 파일을 실제 앱의 `--stream-file`로 검사했습니다.
+  영어 최종 결과는 `Please update the README file on GitHub and keep the API examples in English.`,
+  한국어는 `README 파일을 수정하고 GitHub에 올려주세요. API 사용 예제도 정리해주세요.`였습니다.
+  기존 FLEURS 한국어 13.08초 샘플도 한국어로 전사했습니다. 테스트 오디오는 `var/qa/english-terms`에만 보관합니다.
+- macOS 0.4.2(빌드 7)를 기존 개인 서명으로 설치했습니다. 기존 모델을 사용하며 모델 재다운로드는 없습니다.
+  Windows 버전은 0.5.0-preview.2입니다. 이 기록은 실제 사용자 마이크의 정확도 보장을 의미하지 않습니다.
+
 ## 2026-11-16 공개 배포와 Windows Preview
 
 - 소스는 기존 비공개 `mjeon01/parrot-prompt`에 유지했습니다. 공개 `mjeon01/voiceprompt`는

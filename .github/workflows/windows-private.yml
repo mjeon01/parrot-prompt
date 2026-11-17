@@ -31,7 +31,10 @@ jobs:
           $process = Start-Process $app -ArgumentList '--render-preview', "$pwd/var/qa/windows-preview.png" -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw 'WPF render failed' }
       - name: Audit public release contents
-        run: python scripts/audit-release.py dist/VoicePrompt-0.5.0-preview.1-windows-x64.zip
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem dist/VoicePrompt-*-windows-x64.zip
+          python scripts/audit-release.py $package.FullName
       - name: CPU speech inference smoke test
         shell: pwsh
         run: |

@@ -17,7 +17,7 @@
    <Border Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,16">
     <Expander x:Name="SetupExpander" Header="01  처음 한 번 준비" IsExpanded="True" FontWeight="SemiBold">
     <StackPanel>
-     <TextBlock Text="한국어 Whisper small · 약 488 MB · 다운로드 후 오프라인 사용" Foreground="{StaticResource Muted}" Margin="0,8,0,12"/>
+     <TextBlock Text="Whisper small · 언어 자동 감지 · 약 488 MB · 준비 후 오프라인 사용" Foreground="{StaticResource Muted}" Margin="0,8,0,12"/>
      <Button x:Name="SetupButton" Content="음성 모델 준비" Click="PrepareClick" HorizontalAlignment="Left"/>
      <TextBlock x:Name="SetupStatus" Text="모델을 준비하고 마이크 접근을 허용해 주세요." Margin="0,12,0,0" AutomationProperties.LiveSetting="Polite"/>
      <Button Content="Windows 마이크 설정 열기" Click="MicrophoneClick" HorizontalAlignment="Left" Margin="0,12,0,0"/>
@@ -47,7 +47,7 @@
     <Button Content="작업 표시줄로 숨기기" Click="HideClick" Margin="0,0,8,8"/>
     <Button Content="종료" Click="ExitClick" Margin="0,0,0,8"/>
    </WrapPanel>
-   <TextBlock Text="Windows Preview 0.5.0-preview.1 · 계정·API 키·구독 불필요&#x0a;음성과 전사 내용을 파일로 자동 저장하지 않습니다." Foreground="{StaticResource Muted}" FontSize="12"/>
+   <TextBlock Text="Windows Preview 0.5.0-preview.2 · 계정·API 키·구독 불필요&#x0a;음성과 전사 내용을 파일로 자동 저장하지 않습니다." Foreground="{StaticResource Muted}" FontSize="12"/>
   </StackPanel>
  </ScrollViewer>
 </Window>

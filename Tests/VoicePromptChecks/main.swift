@@ -163,4 +163,14 @@ expect(vocabulary.prompt.contains("Ollama") && vocabulary.prompt.contains("RAG")
 let excessive = TechnicalVocabulary(customTerms: (0..<100).map { "Term\($0)" }.joined(separator: ","))
 expect(excessive.customTerms.count == 24, "Custom vocabulary must remain bounded")
 expect(vocabulary.normalize(TranscriptAccumulator.join(["QON", "2.57B 모델"])) == "Qwen 2.5 7B 모델", "Normalization must work across decoder segment boundaries")
+struct EnglishTermCase: Decodable { let input: String; let expected: String }
+let englishFixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+    .appendingPathComponent("Fixtures/english-terms.json")
+let englishCases = try JSONDecoder().decode([EnglishTermCase].self, from: Data(contentsOf: englishFixture))
+for item in englishCases {
+    expect(vocabulary.normalize(item.input) == item.expected, "English spelling: \(item.input)")
+    expect(vocabulary.normalize(item.expected) == item.expected, "English spelling must be idempotent: \(item.expected)")
+    expect(TechnicalVocabulary.disabled.normalize(item.input) == item.input, "Disabled English spelling: \(item.input)")
+}
+expect(vocabulary.prompt.contains("README") && vocabulary.prompt.contains("GitHub"), "Developer names must reach decoding hints")
 print("Passed \(checks) checks: transcription, hotkeys, technical vocabulary, model sizes, preserved numbers and identifiers.")

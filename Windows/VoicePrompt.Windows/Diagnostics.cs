@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using VoicePrompt.Core;
-using Whisper.net;
+using NAudio.Wave;
 
 namespace VoicePrompt.Windows;
 
@@ -47,12 +47,20 @@ internal static class Diagnostics
         if (args[0] == "--smoke-test" && args.Length == 4)
         {
             var timer = System.Diagnostics.Stopwatch.StartNew();
-            using var factory = WhisperFactory.FromPath(args[1], new WhisperFactoryOptions { UseGpu = false });
-            await using var processor = factory.CreateBuilder().WithLanguage("en").WithNoContext().WithThreads(2).Build();
-            using var wave = File.OpenRead(args[2]);
-            var parts = new List<string>();
-            await foreach (var segment in processor.ProcessAsync(wave)) parts.Add(segment.Text.Trim());
-            var text = string.Join(" ", parts);
+            using var engine = new SpeechEngine();
+            engine.Load(args[1]);
+            using var wave = new WaveFileReader(args[2]);
+            if (wave.WaveFormat.SampleRate != 16000 || wave.WaveFormat.Channels != 1)
+                throw new ArgumentException("Speech fixture must be mono 16 kHz.");
+            var provider = wave.ToSampleProvider();
+            var samples = new List<float>();
+            var buffer = new float[16000];
+            int read;
+            while ((read = provider.Read(buffer, 0, buffer.Length)) > 0) samples.AddRange(buffer.Take(read));
+            // Exercise the app's real automatic-language and vocabulary path,
+            // not a separate English-only decoder that could hide a regression.
+            var segments = await engine.TranscribeAsync(samples.ToArray(), true, CancellationToken.None);
+            var text = Vocabulary.Normalize(string.Join(" ", segments.Select(s => s.Text.Trim())), true);
             File.WriteAllText(args[3], text);
             if (!text.Contains("country", StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Speech smoke test did not recognize the expected fixture.");
             using var process = System.Diagnostics.Process.GetCurrentProcess();

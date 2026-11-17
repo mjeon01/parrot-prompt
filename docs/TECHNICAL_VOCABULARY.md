@@ -19,6 +19,29 @@
 
 ## 표시 규칙
 
+v0.4.2 / Windows 0.5.0-preview.2부터 한국어 언어 고정을 해제하고 음성의 언어를 자동 감지합니다.
+작업은 번역이 아닌 전사(`transcribe`)입니다. 한국어·영어가 섞이면 모델의 언어 판별만으로
+고유 명사 철자를 보장할 수 없어, 영어 개발 용어 힌트와 제한적인 음차 보정을 함께 사용합니다.
+
+`README`, `GitHub`, `Markdown`, `JSON`, `API`, `SDK`, `CLI`, `Python`, `JavaScript`,
+`TypeScript`, `React`, `Docker`, `SQL`, `npm`을 힌트 앞부분에 추가했습니다. 특히
+README와 GitHub가 160토큰 예산 안에서도 실제 디코더에 전달되는지 SDK 검사로 확인합니다.
+README 명칭은 [GitHub의 README 안내](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes)를 참고했습니다.
+
+| 인식된 예시 | 표시 결과 |
+|---|---|
+| 리듬위를 수정해 줘 | README를 수정해 줘 |
+| 리드미에 사용법을 적어 줘 | README에 사용법을 적어 줘 |
+| 깃허브에 올려 줘 | GitHub에 올려 줘 |
+| 에이피아이 사용 예제 | API 사용 예제 |
+| 제이슨 파일 | JSON 파일 |
+
+완전한 용어 뒤에 구두점·공백·한국어 조사가 오는 경우를 구분합니다. `리드미컬한`, `리듬위주의`,
+`리듬 위에`와 영어 일반 문장 `read me a story`, `react to the change`, `a python is a snake`는 바꾸지 않습니다.
+사람 이름 `제이슨`은 파일·데이터 등 인접 문맥이 있을 때만 JSON으로 보정합니다.
+`readme.md`, `리드미.md`, URL·경로·코드 등 명시적인 식별자는 그대로 둡니다.
+새 표기 규칙은 두 플랫폼이 같은 `Tests/Fixtures/english-terms.json`을 읽어 검사합니다.
+
 읽기 쉬운 받아쓰기 표기로 `Qwen 2.5 7B`를 사용합니다. 실제 저장소 ID
 `Qwen/Qwen2.5-7B-Instruct`나 Ollama 태그 `qwen2.5:7b`는 그대로 보존합니다.
 

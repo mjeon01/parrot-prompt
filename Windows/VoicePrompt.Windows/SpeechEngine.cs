@@ -17,7 +17,7 @@ public sealed class SpeechEngine : IDisposable
     {
         if (factory is null) throw new InvalidOperationException("모델을 먼저 준비해 주세요.");
         if (!AudioGate.HasSpeech(audio)) return [];
-        var builder = factory.CreateBuilder().WithLanguage("ko").WithNoContext()
+        var builder = factory.CreateBuilder().WithLanguageDetection().WithNoContext()
             .WithThreads(Math.Max(1, Math.Min(8, Environment.ProcessorCount / 2)))
             .WithNoSpeechThreshold(0.6f).WithLogProbThreshold(-1.0f);
         if (vocabulary) builder.WithPrompt(Vocabulary.Prompt);

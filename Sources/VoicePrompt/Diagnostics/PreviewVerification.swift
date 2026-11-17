@@ -34,6 +34,12 @@ enum PreviewVerification {
                 var options = SpeechEngine.decodingOptions(interim: true, vocabulary: vocabulary, tokenizer: tokenizer)
                 options.withoutTimestamps = !timestamps
                 try require(options.prefixTokens == nil, "Dictation must not force a text prefix")
+                try require(options.language == nil && options.detectLanguage, "Dictation must detect the spoken language instead of forcing Korean")
+                try require(options.task == .transcribe, "Dictation must not translate the user's speech")
+                if vocabulary.enabled {
+                    let hint = tokenizer.decode(tokens: options.promptTokens ?? [])
+                    try require(hint.contains("README") && hint.contains("GitHub"), "English developer terms must survive the prompt token budget")
+                }
                 // Prefill only reads initialPrompt and the first element of two
                 // masks. Small ordinary arrays avoid allocating inference caches.
                 func scalar() throws -> MLMultiArray { try MLMultiArray(shape: [1], dataType: .int32) }
@@ -50,7 +56,8 @@ enum PreviewVerification {
                     "The conditioning vocabulary leaked before any audio text")
 
                 for utterance in ["안녕하세요.", "오늘 회의 내용을 정리해 줘.", "QON 2.57B 모델을 써.",
-                                  "Ollama와 RAG를 사용해.", vocabulary.prompt] where !utterance.isEmpty {
+                                  "Ollama와 RAG를 사용해.", "리듬위를 깃허브에 올려 줘.",
+                                  "Please update the README on GitHub.", vocabulary.prompt] where !utterance.isEmpty {
                     var preview = LivePreview()
                     if let text = StreamingTranscript.text(from: promptOnly, tokenizer: tokenizer, vocabulary: vocabulary) {
                         preview.acceptPartial(TranscriptSnapshot(draft: text))

@@ -7,4 +7,5 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../VoicePrompt.Core/VoicePrompt.Core.csproj" /></ItemGroup>
+  <ItemGroup><None Include="../../Tests/Fixtures/english-terms.json" Link="english-terms.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
 </Project>

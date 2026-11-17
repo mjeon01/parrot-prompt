@@ -28,4 +28,14 @@ foreach (var (source, expected) in new[] {
     Check(Vocabulary.Normalize(source, true) == expected, "vocabulary: " + source);
 Check(Vocabulary.Normalize("QON 모델", false) == "QON 모델", "vocabulary opt out");
 Check(!Vocabulary.Normalize("안녕하세요", true).Contains("Qwen"), "hints never concatenated to speech");
+using var fixture = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "english-terms.json")));
+foreach (var item in fixture.RootElement.EnumerateArray())
+{
+    var input = item.GetProperty("input").GetString()!;
+    var expected = item.GetProperty("expected").GetString()!;
+    Check(Vocabulary.Normalize(input, true) == expected, "English spelling: " + input);
+    Check(Vocabulary.Normalize(expected, true) == expected, "English spelling idempotence: " + expected);
+    Check(Vocabulary.Normalize(input, false) == input, "Disabled English spelling: " + input);
+}
+Check(Vocabulary.Prompt.Contains("README") && Vocabulary.Prompt.Contains("GitHub"), "English names must reach decoding hints");
 Console.WriteLine($"PASS: {count} core regression checks");

@@ -79,8 +79,10 @@ actor SpeechEngine {
         let promptTokens = vocabulary.enabled
             ? Array(tokenizer.encode(text: vocabulary.prompt).filter { $0 < tokenizer.specialTokens.specialTokenBegin }.prefix(160))
             : nil
-        return DecodingOptions(verbose: false, task: .transcribe, language: "ko",
-            temperatureFallbackCount: interim ? 0 : 2, detectLanguage: false, skipSpecialTokens: true,
+        // Transcribe in the detected spoken language; never translate or force
+        // English speech through a Korean-only decoder prompt.
+        return DecodingOptions(verbose: false, task: .transcribe, language: nil,
+            temperatureFallbackCount: interim ? 0 : 2, detectLanguage: true, skipSpecialTokens: true,
             withoutTimestamps: false, wordTimestamps: false, windowClipTime: 0,
             promptTokens: promptTokens,
             suppressBlank: true, concurrentWorkerCount: 1)
